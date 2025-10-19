@@ -5,6 +5,7 @@ import time
 import logging
 import sys
 import os
+import json
 
 # Add the project root to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -151,7 +152,7 @@ def get_policy():
         st.error(f"Unexpected error: {str(e)}")
         return {}
 
-def create_task(description, project=None, tags=None, due=None):
+def create_task(description, project=None, tags=None, due=None, browser_task=False, url=None, actions=None):
     try:
         data = {"description": description}
         if project:
@@ -160,6 +161,10 @@ def create_task(description, project=None, tags=None, due=None):
             data["tags"] = tags
         if due:
             data["due"] = due
+        if browser_task:
+            data["browser_task"] = True
+            data["url"] = url
+            data["actions"] = actions
             
         response = requests.post(f"{API_BASE_URL}/tasks", json=data, timeout=10)
         if response.status_code == 200:
@@ -225,11 +230,27 @@ elif page == "Tasks":
             project = st.text_input("Project")
             tags = st.text_input("Tags (comma-separated)")
             due = st.text_input("Due date (YYYY-MM-DD)")
+
+            is_browser_task = st.checkbox("Browser Task")
+            url = st.text_input("URL (for browser tasks)")
+            actions = st.text_area("Actions (for browser tasks, JSON format)")
+
             submitted = st.form_submit_button("Create Task")
             
             if submitted:
                 tag_list = [tag.strip() for tag in tags.split(",")] if tags else None
-                result = create_task(description, project, tag_list, due)
+                
+                task_data = {
+                    "description": description,
+                    "project": project,
+                    "tags": tag_list,
+                    "due": due,
+                    "browser_task": is_browser_task,
+                    "url": url,
+                    "actions": json.loads(actions) if actions else []
+                }
+
+                result = create_task(**task_data)
                 if result:
                     st.success("Task created successfully!")
                     st.cache_data.clear()

@@ -7,6 +7,7 @@ import sqlite3
 from . import redis_pool
 from .database import db_pool
 from .exceptions import RedisError, DatabaseError
+from agents.browser_agent.main import BrowserAgent
 
 class Worker:
     """A worker that processes tasks from the message queue."""
@@ -23,6 +24,8 @@ class Worker:
         except (RedisError, DatabaseError) as e:
             self.logger.error(f"Failed to initialize Worker: {e}")
             raise
+
+        self.browser_agent = BrowserAgent()
 
     def run(self):
         """Continuously process tasks from the queue."""
@@ -44,15 +47,20 @@ class Worker:
         task_id = task.get("id")
         self.logger.info(f"Processing task {task_id}")
 
-        # Simulate work
-        time.sleep(2)
+        if task.get("browser_task"):
+            result = self.browser_agent.execute_task(task)
+            status = result.get("status")
+        else:
+            # Simulate work for non-browser tasks
+            time.sleep(2)
+            status = "completed"
 
         # Update task status in the database
         try:
             cursor = self.db_conn.cursor()
-            cursor.execute("UPDATE tasks SET status = ? WHERE id = ?", ("completed", task_id))
+            cursor.execute("UPDATE tasks SET status = ? WHERE id = ?", (status, task_id))
             self.db_conn.commit()
-            self.logger.info(f"Task {task_id} completed")
+            self.logger.info(f"Task {task_id} {status}")
         except sqlite3.Error as e:
             self.logger.error(f"Database error while updating task {task_id}: {e}")
 
