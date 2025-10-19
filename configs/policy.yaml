@@ -1,0 +1,33 @@
+routing:
+  max_latency_ms: 12000
+  min_success_prior: 0.55
+  prefer_cached_when_ping_ms_gt: 120
+agents:
+  browser:
+    default_timeout_s: 15
+    max_retries: 2
+    headed_on_flake_rate_gt: 0.25
+  research:
+    searxng_url: "http://localhost:8080"
+fallbacks:
+  captcha: block_and_notify
+learning:
+  enabled: true
+  min_samples: 200
+  retrain_every_runs: 200
+database:
+  max_connections: 20
+redis:
+  host: localhost
+  port: 6379
+  max_connections: 20
+searcher:
+  search_url: "http://localhost:8080"
+  max_retries: 3
+  pool_connections: 10
+  pool_maxsize: 20
+cli:
+  api_base_url: "http://localhost:9000/api"
+  max_retries: 3
+  pool_connections: 10
+  pool_maxsize: 20

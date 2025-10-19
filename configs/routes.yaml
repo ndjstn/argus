@@ -1,0 +1,20 @@
+# API routes configuration
+routes:
+  - path: "/api/tasks"
+    methods: ["GET", "POST"]
+    handler: "task_handler"
+  - path: "/api/tasks/{uuid}"
+    methods: ["GET", "PATCH", "DELETE"]
+    handler: "task_detail_handler"
+  - path: "/api/runs"
+    methods: ["GET"]
+    handler: "runs_handler"
+  - path: "/api/plan"
+    methods: ["POST"]
+    handler: "plan_handler"
+  - path: "/api/metrics/daily"
+    methods: ["GET"]
+    handler: "metrics_handler"
+  - path: "/api/policy"
+    methods: ["GET", "POST"]
+    handler: "policy_handler"

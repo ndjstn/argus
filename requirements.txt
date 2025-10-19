@@ -1,0 +1,21 @@
+# Core dependencies
+taskw==1.2.0
+pydantic==2.5.0
+pyyaml==6.0.1
+
+# Web framework
+fastapi==0.104.1
+uvicorn==0.24.0
+streamlit==1.28.0
+
+# Agents and tools
+playwright==1.40.0
+opencv-python==4.8.1.78
+numpy>=1.24.3
+scikit-learn==1.3.0
+
+# Message queue
+redis==5.0.1
+
+# Utilities
+python-dotenv==1.0.0

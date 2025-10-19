@@ -1,0 +1,16 @@
+[ui]
+title = "Agentic System"
+theme = "dark"
+sidebar_width = 250
+
+[dashboard]
+refresh_interval = 5000
+max_tasks_display = 50
+
+[metrics]
+default_time_range = "24h"
+refresh_interval = 10000
+
+[logging]
+level = "INFO"
+format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
