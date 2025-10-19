@@ -232,7 +232,7 @@ elif page == "Chat":
     )
 
     models = {
-        "Ollama": [model["name"] for model in ollama.list()["models"]],
+        "Ollama": list(set([model["name"] for model in ollama.list()["models"]] + ["gemma3:4b"])),
         "OpenAI": ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"],
         "Gemini": ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"],
         "Groq": ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "mixtral-8x7b-32768"],
@@ -241,7 +241,8 @@ elif page == "Chat":
 
     model = st.sidebar.selectbox(
         "Choose a model:",
-        models[provider]
+        models[provider],
+        index=models[provider].index("gemma3:4b") if provider == "Ollama" and "gemma3:4b" in models[provider] else 0
     )
 
     if st.sidebar.button("Clear Chat"):
