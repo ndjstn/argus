@@ -40,7 +40,7 @@ Welcome to the Agentic System Dashboard. This interface allows you to:
 st.sidebar.title("Navigation")
 page = st.sidebar.selectbox(
     "Choose a page:",
-    ["Overview", "Chat", "Agents", "Metrics", "Policy"]
+    ["Chat", "Overview", "Agents", "Metrics", "Policy"]
 )
 
 # Helper functions
@@ -225,10 +225,26 @@ elif page == "Chat":
 
     # Model selection
     st.sidebar.title("Model")
-    model = st.sidebar.selectbox(
-        "Choose a model:",
+    provider = st.sidebar.selectbox(
+        "Choose a provider:",
         ["Ollama", "OpenAI", "Gemini", "Groq", "Claude"]
     )
+
+    models = {
+        "Ollama": ["llama2", "mistral"],
+        "OpenAI": ["gpt-3.5-turbo", "gpt-4"],
+        "Gemini": ["gemini-pro", "gemini-ultra"],
+        "Groq": ["llama2-70b-4096", "mistral-8x7b-32768"],
+        "Claude": ["claude-2", "claude-instant-1"]
+    }
+
+    model = st.sidebar.selectbox(
+        "Choose a model:",
+        models[provider]
+    )
+
+    if st.sidebar.button("Clear Chat"):
+        st.session_state.messages = []
 
     # Initialize chat history
     if "messages" not in st.session_state:
@@ -247,23 +263,27 @@ elif page == "Chat":
         # Add user message to chat history
         st.session_state.messages.append({"role": "user", "content": prompt})
 
-        # Call the API
-        try:
-            response = requests.post(
-                f"{API_BASE_URL}/chat",
-                json={"message": prompt, "model": model},
-                timeout=30
-            )
-            if response.status_code == 200:
-                full_response = response.json().get("response")
-            else:
-                full_response = f"Error: {response.status_code}"
-        except requests.exceptions.RequestException as e:
-            full_response = f"Error: {e}"
-
         # Display assistant response in chat message container
         with st.chat_message("assistant"):
-            st.markdown(full_response)
+            message_placeholder = st.empty()
+            with st.spinner("Thinking..."):
+                # Call the API
+                try:
+                    response = requests.post(
+                        f"{API_BASE_URL}/chat",
+                        json={"message": prompt, "model": model},
+                        timeout=30
+                    )
+                    if response.status_code == 200:
+                        full_response = response.json().get("response")
+                    else:
+                        full_response = f"Error: {response.status_code}"
+                except requests.exceptions.RequestException as e:
+                    full_response = f"Error: {e}"
+            message_placeholder.markdown(full_response)
+            if st.button("Copy", key=f"copy_{len(st.session_state.messages)}"):
+                st.code(full_response)
+
         # Add assistant response to chat history
         st.session_state.messages.append({"role": "assistant", "content": full_response})
     
