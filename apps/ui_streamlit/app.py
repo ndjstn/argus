@@ -238,10 +238,22 @@ elif page == "Tasks":
     
     # Task list
     st.subheader("Task List")
+
+    if st.button("Refresh"):
+        st.cache_data.clear()
+
+    if st.checkbox("Auto-refresh every 5 seconds"):
+        time.sleep(5)
+        st.experimental_rerun()
+
     tasks = get_tasks()
     if tasks:
         df = pd.DataFrame(tasks)
         st.dataframe(df[["description", "project", "tags", "status", "urgency", "due_ts"]])
+
+        for task in tasks:
+            with st.expander(f"Task {task['id']}: {task['description']}"):
+                st.write(task)
     else:
         st.info("No tasks found.")
     
