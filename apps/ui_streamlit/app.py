@@ -231,12 +231,15 @@ elif page == "Chat":
     )
 
     models = {
-        "Ollama": ["llama2", "mistral"],
-        "OpenAI": ["gpt-3.5-turbo", "gpt-4"],
-        "Gemini": ["gemini-pro", "gemini-ultra"],
-        "Groq": ["llama2-70b-4096", "mistral-8x7b-32768"],
-        "Claude": ["claude-2", "claude-instant-1"]
+        "Ollama": ["ollama-model-1", "ollama-model-2"], # Placeholder, requires `ollama list` to get actual models
+        "OpenAI": ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"],
+        "Gemini": ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"],
+        "Groq": ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "mixtral-8x7b-32768"],
+        "Claude": ["claude-3.5-sonnet", "claude-3-opus", "claude-3-haiku"]
     }
+
+    if provider == "Ollama":
+        st.sidebar.warning("Ollama models are placeholders. Please run `ollama list` to get the actual models.")
 
     model = st.sidebar.selectbox(
         "Choose a model:",
