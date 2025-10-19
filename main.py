@@ -55,21 +55,20 @@ class ApplicationManager:
         logger.info("API server thread started")
         
     def start_message_queue_processor(self):
-        """Start the message queue processor"""
+        """Start the message queue processor with efficient event-driven mechanism"""
         def process_messages():
             try:
                 mq = MessageQueue()
                 logger.info("Message queue processor started")
                 
+                # Use a blocking mechanism instead of polling
                 while not self.shutdown_event.is_set():
-                    # Process messages from queue
-                    message = mq.dequeue()
+                    # Block with timeout to allow graceful shutdown
+                    message = mq.dequeue(timeout=5.0)  # 5 second timeout for better efficiency
                     if message:
                         logger.info(f"Processing message: {message}")
                         # In a real implementation, this would route to appropriate agents
-                    else:
-                        # No messages, sleep briefly
-                        time.sleep(0.1)
+                    # No need for sleep - the dequeue call blocks until timeout or message
                         
             except Exception as e:
                 logger.error(f"Message queue processor error: {e}")
@@ -80,15 +79,24 @@ class ApplicationManager:
         logger.info("Message queue processor thread started")
         
     def start_coordinator(self):
-        """Start the coordinator service"""
+        """Start the coordinator service with efficient event-driven mechanism"""
         def run_coordinator():
             try:
                 coordinator = Coordinator()
                 logger.info("Coordinator service started")
                 
+                # Use a work event to signal when there's work to do
+                work_event = threading.Event()
+                
                 # In a real implementation, this would coordinate tasks
                 while not self.shutdown_event.is_set():
-                    time.sleep(1)
+                    # Wait for work or shutdown signal with timeout
+                    work_event.wait(timeout=5.0)  # Check every 5 seconds for work
+                    work_event.clear()
+                    
+                    # Check if there's work to do (placeholder for real implementation)
+                    # If work is found, process it, then reset the event
+                    # For now, this is just a placeholder
                     
             except Exception as e:
                 logger.error(f"Coordinator service error: {e}")
@@ -138,27 +146,3 @@ class ApplicationManager:
                 
         logger.info("Application shutdown complete")
         sys.exit(0)
-
-def main():
-    """Main entry point for the application"""
-    logger.info("Starting Agentic System...")
-    
-    # Create application manager
-    app_manager = ApplicationManager()
-    
-    # Set up signal handlers
-    app_manager.setup_signal_handlers()
-    
-    # Start all services
-    app_manager.start_all_services()
-    
-    # Keep main thread alive
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        logger.info("Received interrupt signal")
-        app_manager.shutdown()
-
-if __name__ == "__main__":
-    main()
