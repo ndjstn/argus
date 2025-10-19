@@ -25,8 +25,8 @@ app = FastAPI(
 def get_db_connection():
     """Get database connection with proper error handling and logging."""
     # Use absolute path from project root
-    # File is in apps/proxy_api/, so we need to go up 2 levels to reach project root
-    db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "core.db")
+    # File is in apps/proxy_api/, so we need to go up 3 levels to reach project root
+    db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data", "core.db"))
     
     # Ensure the data directory exists
     data_dir = os.path.dirname(db_path)
