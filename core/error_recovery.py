@@ -49,11 +49,39 @@ class ErrorRecoveryStrategy:
         raise NotImplementedError
 
 
+class ValidationError(AgenticError):
+    """Exception raised for validation errors."""
+    
+    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None):
+        """
+        Initialize the validation error.
+        
+        Args:
+            message: The error message
+            details: Additional details about the error
+        """
+        super().__init__(message, "VALIDATION_ERROR", None, details)
+
+
+class ConfigurationError(AgenticError):
+    """Exception raised for configuration errors."""
+    
+    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None):
+        """
+        Initialize the configuration error.
+        
+        Args:
+            message: The error message
+            details: Additional details about the error
+        """
+        super().__init__(message, "CONFIGURATION_ERROR", None, details)
+
+
 class ExponentialBackoffStrategy(ErrorRecoveryStrategy):
     """Error recovery strategy using exponential backoff with jitter."""
     
     def __init__(
-        self, 
+        self,
         name: str = "exponential_backoff",
         base_delay: float = 1.0,
         max_delay: float = 60.0,
@@ -210,32 +238,6 @@ class CircuitBreakerError(AgenticError):
         super().__init__(message, "CIRCUIT_BREAKER_OPEN")
 
 
-class ValidationError(AgenticError):
-    """Exception raised for validation errors."""
-    
-    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None):
-        """
-        Initialize the validation error.
-        
-        Args:
-            message: The error message
-            details: Additional details about the error
-        """
-        super().__init__(message, "VALIDATION_ERROR", None, details)
-
-
-class ConfigurationError(AgenticError):
-    """Exception raised for configuration errors."""
-    
-    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None):
-        """
-        Initialize the configuration error.
-        
-        Args:
-            message: The error message
-            details: Additional details about the error
-        """
-        super().__init__(message, "CONFIGURATION_ERROR", None, details)
 
 
 def retry_with_backoff(
