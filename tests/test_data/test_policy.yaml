@@ -1,0 +1,21 @@
+
+routing:
+  max_latency_ms: 10000
+  min_success_prior: 0.6
+  prefer_cached_when_ping_ms_gt: 100
+
+agents:
+  browser:
+    default_timeout_s: 10
+    max_retries: 1
+    headed_on_flake_rate_gt: 0.3
+  research:
+    searxng_url: "http://localhost:8888"
+
+fallbacks:
+  captcha: "skip"
+
+learning:
+  enabled: false
+  min_samples: 100
+  retrain_every_runs: 100

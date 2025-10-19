@@ -116,8 +116,8 @@ class MessageQueue:
             })
             return False
         
-    def dequeue(self) -> Dict[str, Any]:
-        """Dequeue a message with Redis error handling"""
+    def dequeue(self, timeout: float = 1.0) -> Dict[str, Any]:
+        """Dequeue a message with Redis error handling and configurable timeout"""
         start_time = time.time()
         self.dequeue_count += 1
         
@@ -125,12 +125,13 @@ class MessageQueue:
         self.logger.debug("Dequeuing message", extra={
             "event": "mq_dequeue_start",
             "queue_name": self.queue_name,
-            "dequeue_count": self.dequeue_count
+            "dequeue_count": self.dequeue_count,
+            "timeout": timeout
         })
         
         try:
             with redis_pool.connection() as conn:
-                message = conn.brpop(self.queue_name, timeout=1)
+                message = conn.brpop(self.queue_name, timeout=timeout)
             dequeue_time = time.time() - start_time
             if message:
                 msg_data = json.loads(message[1])

@@ -7,7 +7,7 @@ import time
 class PolicyEngine:
     """Policy engine for decision making"""
     
-    def __init__(self, config_path: str = "configs/policy.yaml"):
+    def __init__(self, config_path: str):
         self.logger = logging.getLogger(__name__)
         self.decision_count = 0
         self.logger.info("Initializing Policy Engine")
@@ -144,7 +144,7 @@ class PolicyEngine:
 
 if __name__ == "__main__":
     # For testing purposes
-    policy_engine = PolicyEngine()
+    policy_engine = PolicyEngine(config_path="configs/policy.yaml")
     decision = policy_engine.decide(
         {"project": "demo", "urgency": 5.0},
         {"ping_ms": 50, "cpu_load": 0.3, "flake_rate": 0.1}

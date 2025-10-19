@@ -7,6 +7,7 @@ import json
 import os
 import logging
 from datetime import datetime
+from core.llm_router import LLMRouter
 
 # Configure logging
 logging.basicConfig(
@@ -47,6 +48,8 @@ def get_db_connection():
             detail="Database connection failed. Please check if the database file exists and is accessible."
         )
 
+llm_router = LLMRouter()
+
 # Data models
 class TaskCreate(BaseModel):
     description: str
@@ -71,10 +74,21 @@ class TaskResponse(BaseModel):
     due_ts: Optional[int] = None
     updated_ts: int
 
+class ChatRequest(BaseModel):
+    message: str
+    model: str
+
 # API endpoints
 @app.get("/")
 async def root():
     return {"message": "Agentic System API"}
+
+@app.post("/api/chat")
+async def chat(request: ChatRequest):
+    """Handle a chat message"""
+    logger.info(f"Received chat message for model {request.model}: {request.message}")
+    response = llm_router.route(request.model, request.message)
+    return {"response": response}
 
 @app.get("/api/tasks", response_model=List[TaskResponse])
 async def get_tasks(filter: Optional[str] = None):

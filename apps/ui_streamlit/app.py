@@ -40,7 +40,7 @@ Welcome to the Agentic System Dashboard. This interface allows you to:
 st.sidebar.title("Navigation")
 page = st.sidebar.selectbox(
     "Choose a page:",
-    ["Overview", "Tasks", "Agents", "Metrics", "Policy"]
+    ["Overview", "Chat", "Agents", "Metrics", "Policy"]
 )
 
 # Helper functions
@@ -220,63 +220,52 @@ if page == "Overview":
     else:
         st.info("No tasks found.")
     
-elif page == "Tasks":
-    st.header("Task Management")
-    
-    # Create new task
-    with st.expander("Create New Task"):
-        with st.form("create_task_form"):
-            description = st.text_input("Description")
-            project = st.text_input("Project")
-            tags = st.text_input("Tags (comma-separated)")
-            due = st.text_input("Due date (YYYY-MM-DD)")
+elif page == "Chat":
+    st.header("Chat")
 
-            is_browser_task = st.checkbox("Browser Task")
-            url = st.text_input("URL (for browser tasks)")
-            actions = st.text_area("Actions (for browser tasks, JSON format)")
+    # Model selection
+    st.sidebar.title("Model")
+    model = st.sidebar.selectbox(
+        "Choose a model:",
+        ["Ollama", "OpenAI", "Gemini", "Groq", "Claude"]
+    )
 
-            submitted = st.form_submit_button("Create Task")
-            
-            if submitted:
-                tag_list = [tag.strip() for tag in tags.split(",")] if tags else None
-                
-                task_data = {
-                    "description": description,
-                    "project": project,
-                    "tags": tag_list,
-                    "due": due,
-                    "browser_task": is_browser_task,
-                    "url": url,
-                    "actions": json.loads(actions) if actions else []
-                }
+    # Initialize chat history
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
-                result = create_task(**task_data)
-                if result:
-                    st.success("Task created successfully!")
-                    st.cache_data.clear()
-                else:
-                    st.error("Failed to create task.")
-    
-    # Task list
-    st.subheader("Task List")
+    # Display chat messages from history on app rerun
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-    if st.button("Refresh"):
-        st.cache_data.clear()
+    # React to user input
+    if prompt := st.chat_input("What is up?"):
+        # Display user message in chat message container
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        # Add user message to chat history
+        st.session_state.messages.append({"role": "user", "content": prompt})
 
-    if st.checkbox("Auto-refresh every 5 seconds"):
-        time.sleep(5)
-        st.experimental_rerun()
+        # Call the API
+        try:
+            response = requests.post(
+                f"{API_BASE_URL}/chat",
+                json={"message": prompt, "model": model},
+                timeout=30
+            )
+            if response.status_code == 200:
+                full_response = response.json().get("response")
+            else:
+                full_response = f"Error: {response.status_code}"
+        except requests.exceptions.RequestException as e:
+            full_response = f"Error: {e}"
 
-    tasks = get_tasks()
-    if tasks:
-        df = pd.DataFrame(tasks)
-        st.dataframe(df[["description", "project", "tags", "status", "urgency", "due_ts"]])
-
-        for task in tasks:
-            with st.expander(f"Task {task['id']}: {task['description']}"):
-                st.write(task)
-    else:
-        st.info("No tasks found.")
+        # Display assistant response in chat message container
+        with st.chat_message("assistant"):
+            st.markdown(full_response)
+        # Add assistant response to chat history
+        st.session_state.messages.append({"role": "assistant", "content": full_response})
     
 elif page == "Agents":
     st.header("Agent Monitoring")

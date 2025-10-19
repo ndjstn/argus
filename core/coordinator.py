@@ -12,7 +12,7 @@ from .exceptions import RedisError
 class Coordinator:
     """Main coordinator for the agentic system with Redis error handling"""
     
-    def __init__(self):
+    def __init__(self) -> None:
         self.logger = logging.getLogger(__name__)
         self.logger.info("Initializing Coordinator")
         
@@ -43,22 +43,44 @@ class Coordinator:
         # Queue name
         self.task_queue = "task_queue"
         
+    def _handle_task_error(self, task_id: str, e: Exception, start_time: float, enqueue_start: float) -> Dict[str, Any]:
+        """Helper method to handle errors during task processing."""
+        enqueue_time = (time.time() - enqueue_start) * 1000
+        self.total_enqueue_time_ms += enqueue_time
+        processing_time = (time.time() - start_time) * 1000
+        self.total_processing_time_ms += processing_time
+
+        error_type = type(e).__name__
+        error_message = str(e)
+
+        self.logger.error(
+            f"Error while enqueuing task {task_id}: {error_message}",
+            extra={
+                "task_id": task_id,
+                "status": "error",
+                "error": error_message,
+                "error_type": error_type,
+                "enqueue_time_ms": enqueue_time,
+                "processing_time_ms": processing_time
+            }
+        )
+
+        return {
+            "status": "error",
+            "task_id": task_id,
+            "error": f"{error_type}: {error_message}",
+            "processing_time_ms": processing_time
+        }
+
     def process_task(self, task_spec: Dict[str, Any]) -> Dict[str, Any]:
         """Process a task through the system with Redis error handling"""
         start_time = time.time()
         self.total_tasks_processed += 1
         
-        # Log structured information about the task
         task_id = task_spec.get("id", "unknown")
         task_description = task_spec.get("description", "no description")
         self.logger.info(f"Processing task {task_id}: {task_description}")
         
-        # In a real implementation, this would:
-        # 1. Use the Policy Engine to decide which agent to use
-        # 2. Enqueue the task to the message queue
-        # 3. Wait for the result
-        
-        # For now, we'll just enqueue the task
         enqueue_start = time.time()
         try:
             self.redis_client.lpush(self.task_queue, json.dumps(task_spec))
@@ -69,7 +91,6 @@ class Coordinator:
             processing_time = (time.time() - start_time) * 1000
             self.total_processing_time_ms += processing_time
             
-            # Log structured result
             self.logger.info(
                 "Task enqueued successfully",
                 extra={
@@ -86,106 +107,11 @@ class Coordinator:
                 "message": "Task has been enqueued for processing",
                 "processing_time_ms": processing_time
             }
-        except redis.ConnectionError as e:
-            enqueue_time = (time.time() - enqueue_start) * 1000
-            self.total_enqueue_time_ms += enqueue_time
-            processing_time = (time.time() - start_time) * 1000
-            self.total_processing_time_ms += processing_time
-            
-            # Log structured error
-            self.logger.error(
-                f"Redis connection error while enqueuing task {task_id}",
-                extra={
-                    "task_id": task_id,
-                    "status": "error",
-                    "error": str(e),
-                    "error_type": type(e).__name__,
-                    "enqueue_time_ms": enqueue_time,
-                    "processing_time_ms": processing_time
-                }
-            )
-            
-            return {
-                "status": "error",
-                "task_id": task_id,
-                "error": f"Redis connection error: {str(e)}",
-                "processing_time_ms": processing_time
-            }
-        except redis.TimeoutError as e:
-            enqueue_time = (time.time() - enqueue_start) * 1000
-            self.total_enqueue_time_ms += enqueue_time
-            processing_time = (time.time() - start_time) * 1000
-            self.total_processing_time_ms += processing_time
-            
-            # Log structured error
-            self.logger.error(
-                f"Redis timeout error while enqueuing task {task_id}",
-                extra={
-                    "task_id": task_id,
-                    "status": "error",
-                    "error": str(e),
-                    "error_type": type(e).__name__,
-                    "enqueue_time_ms": enqueue_time,
-                    "processing_time_ms": processing_time
-                }
-            )
-            
-            return {
-                "status": "error",
-                "task_id": task_id,
-                "error": f"Redis timeout error: {str(e)}",
-                "processing_time_ms": processing_time
-            }
-        except redis.RedisError as e:
-            enqueue_time = (time.time() - enqueue_start) * 1000
-            self.total_enqueue_time_ms += enqueue_time
-            processing_time = (time.time() - start_time) * 1000
-            self.total_processing_time_ms += processing_time
-            
-            # Log structured error
-            self.logger.error(
-                f"Redis error while enqueuing task {task_id}",
-                extra={
-                    "task_id": task_id,
-                    "status": "error",
-                    "error": str(e),
-                    "error_type": type(e).__name__,
-                    "enqueue_time_ms": enqueue_time,
-                    "processing_time_ms": processing_time
-                }
-            )
-            
-            return {
-                "status": "error",
-                "task_id": task_id,
-                "error": f"Redis error: {str(e)}",
-                "processing_time_ms": processing_time
-            }
+        except (redis.ConnectionError, redis.TimeoutError, redis.RedisError) as e:
+            return self._handle_task_error(task_id, e, start_time, enqueue_start)
         except Exception as e:
-            enqueue_time = (time.time() - enqueue_start) * 1000
-            self.total_enqueue_time_ms += enqueue_time
-            processing_time = (time.time() - start_time) * 1000
-            self.total_processing_time_ms += processing_time
-            
-            # Log structured error
-            self.logger.error(
-                f"Unexpected error while enqueuing task {task_id}: {e}",
-                extra={
-                    "task_id": task_id,
-                    "status": "error",
-                    "error": str(e),
-                    "error_type": type(e).__name__,
-                    "enqueue_time_ms": enqueue_time,
-                    "processing_time_ms": processing_time
-                }
-            )
-            
-            return {
-                "status": "error",
-                "task_id": task_id,
-                "error": f"Unexpected error: {str(e)}",
-                "processing_time_ms": processing_time
-            }
+            return self._handle_task_error(task_id, e, start_time, enqueue_start)
+
 
 if __name__ == "__main__":
     # For testing purposes

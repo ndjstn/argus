@@ -118,8 +118,8 @@ class TaskwarriorAdapter:
             return converted_tasks
         except TaskwarriorError as e:
             operation_time = time.time() - start_time
-            # Handle TaskwarriorError specifically since its __str__ method returns bytes
-            error_msg = f"TaskwarriorError: {e.stderr.decode('utf-8', errors='replace') if isinstance(e.stderr, bytes) else e.stderr}"
+            # Use the string representation provided by the taskw library
+            error_msg = f"TaskwarriorError: {str(e)}"
             self.logger.error("Error fetching tasks from Taskwarrior", extra={
                 "event": "taskwarrior_get_tasks_error",
                 "filter": filter,
@@ -205,8 +205,8 @@ class TaskwarriorAdapter:
             return converted_task
         except TaskwarriorError as e:
             operation_time = time.time() - start_time
-            # Handle TaskwarriorError specifically since its __str__ method returns bytes
-            error_msg = f"TaskwarriorError: {e.stderr.decode('utf-8', errors='replace') if isinstance(e.stderr, bytes) else e.stderr}"
+            # Use the string representation provided by the taskw library
+            error_msg = f"TaskwarriorError: {e.stderr.decode('utf-8') if isinstance(e.stderr, bytes) else e.stderr}"
             self.logger.error("Error creating task in Taskwarrior", extra={
                 "event": "taskwarrior_create_task_error",
                 "description": description,
@@ -295,8 +295,8 @@ class TaskwarriorAdapter:
             return converted_task
         except TaskwarriorError as e:
             operation_time = time.time() - start_time
-            # Handle TaskwarriorError specifically since its __str__ method returns bytes
-            error_msg = f"TaskwarriorError: {e.stderr.decode('utf-8', errors='replace') if isinstance(e.stderr, bytes) else e.stderr}"
+            # Use the string representation provided by the taskw library
+            error_msg = f"TaskwarriorError: {str(e)}"
             self.logger.error("Error updating task in Taskwarrior", extra={
                 "event": "taskwarrior_update_task_error",
                 "uuid": uuid,

@@ -48,82 +48,68 @@ class DatabaseConnectionPool:
         start_time = time.time()
         self.total_get_connection_calls += 1
         
-        try:
-            with self.lock:
-                wait_time = (time.time() - start_time) * 1000
-                self.total_wait_time_ms += wait_time
-                
-                if self.connections:
-                    self.total_connections_returned += 1
-                    conn = self.connections.pop()
-                    # Verify connection is still valid
-                    try:
-                        conn.execute("SELECT 1")
-                        return conn
-                    except sqlite3.Error:
-                        # Connection is invalid, create a new one
-                        self.connection_count -= 1
-                        self.total_connections_closed += 1
-                        self.total_errors += 1
-                        logger.warning("Invalid connection found in pool, creating new one")
-                
-                if self.connection_count < self.max_connections:
-                    self.connection_count += 1
-                    self.total_connections_created += 1
-                    try:
-                        conn = sqlite3.connect(self.db_path)
-                        conn.row_factory = sqlite3.Row
-                        # Enable foreign key constraints
-                        conn.execute("PRAGMA foreign_keys = ON")
-                        return conn
-                    except sqlite3.Error as e:
-                        self.connection_count -= 1
-                        self.total_errors += 1
-                        logger.error(f"Failed to create database connection: {e}")
-                        raise DatabaseError(f"Failed to create database connection: {e}")
-                
-                # If we've reached max connections, wait for one to be returned
-                # This is a simple implementation - in production you might want to use a queue
-                self.total_errors += 1
-                raise DatabaseError("Maximum database connections reached")
-        except Exception as e:
-            if not isinstance(e, DatabaseError):
-                self.total_errors += 1
-                logger.error(f"Unexpected error in get_connection: {e}")
-                raise DatabaseError(f"Unexpected error in get_connection: {e}")
-            raise
+        with self.lock:
+            wait_time = (time.time() - start_time) * 1000
+            self.total_wait_time_ms += wait_time
+            
+            while not self.connections and self.connection_count >= self.max_connections:
+                self.lock.wait()
+
+            if self.connections:
+                self.total_connections_returned += 1
+                conn = self.connections.pop()
+                # Verify connection is still valid
+                try:
+                    conn.execute("SELECT 1")
+                    return conn
+                except sqlite3.Error:
+                    # Connection is invalid, create a new one
+                    self.connection_count -= 1
+                    self.total_connections_closed += 1
+                    self.total_errors += 1
+                    logger.warning("Invalid connection found in pool, creating new one")
+            
+            if self.connection_count < self.max_connections:
+                self.connection_count += 1
+                self.total_connections_created += 1
+                try:
+                    conn = sqlite3.connect(self.db_path)
+                    conn.row_factory = sqlite3.Row
+                    # Enable foreign key constraints
+                    conn.execute("PRAGMA foreign_keys = ON")
+                    return conn
+                except sqlite3.Error as e:
+                    self.connection_count -= 1
+                    self.total_errors += 1
+                    logger.error(f"Failed to create database connection: {e}")
+                    raise DatabaseError(f"Failed to create database connection: {e}")
+            
+            # This part should not be reached if the logic is correct
+            self.total_errors += 1
+            raise DatabaseError("Failed to get a database connection")
     
     def return_connection(self, conn: sqlite3.Connection):
         """Return a connection to the pool"""
-        try:
-            with self.lock:
-                if len(self.connections) < self.max_connections:
-                    # Check if connection is still valid before returning to pool
-                    try:
-                        conn.execute("SELECT 1")
-                        self.connections.append(conn)
-                        self.total_connections_returned += 1
-                    except sqlite3.Error:
-                        # Connection is invalid, close it
-                        conn.close()
-                        self.connection_count -= 1
-                        self.total_connections_closed += 1
-                        self.total_errors += 1
-                        logger.warning("Invalid connection returned to pool, closing it")
-                else:
-                    # Close the connection if pool is full
+        with self.lock:
+            if len(self.connections) < self.max_connections:
+                # Check if connection is still valid before returning to pool
+                try:
+                    conn.execute("SELECT 1")
+                    self.connections.append(conn)
+                    self.total_connections_returned += 1
+                    self.lock.notify()
+                except sqlite3.Error:
+                    # Connection is invalid, close it
                     conn.close()
                     self.connection_count -= 1
                     self.total_connections_closed += 1
-        except Exception as e:
-            self.total_errors += 1
-            logger.error(f"Error returning connection to pool: {e}")
-            # Try to close the connection to prevent leaks
-            try:
+                    self.total_errors += 1
+                    logger.warning("Invalid connection returned to pool, closing it")
+            else:
+                # Close the connection if pool is full
                 conn.close()
-            except:
-                pass
-            raise DatabaseError(f"Error returning connection to pool: {e}")
+                self.connection_count -= 1
+                self.total_connections_closed += 1
     
     @contextmanager
     def connection(self):
