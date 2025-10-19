@@ -6,7 +6,6 @@ import logging
 import sys
 import os
 import json
-import ollama
 
 # Add the project root to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -232,7 +231,7 @@ elif page == "Chat":
     )
 
     models = {
-        "Ollama": list(set([model["name"] for model in ollama.list()["models"]] + ["gemma3:4b"])),
+        "Ollama": ["gemma3:4b", "llama2", "mistral"], # Placeholder, requires `ollama list` to get actual models
         "OpenAI": ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"],
         "Gemini": ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"],
         "Groq": ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "mixtral-8x7b-32768"],
@@ -241,8 +240,7 @@ elif page == "Chat":
 
     model = st.sidebar.selectbox(
         "Choose a model:",
-        models[provider],
-        index=models[provider].index("gemma3:4b") if provider == "Ollama" and "gemma3:4b" in models[provider] else 0
+        models[provider]
     )
 
     if st.sidebar.button("Clear Chat"):
