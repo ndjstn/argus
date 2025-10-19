@@ -15,6 +15,7 @@ from core.mq import MessageQueue
 from core.redis_pool import redis_pool
 from core.database import db_pool
 from apps.proxy_api.main import app as fastapi_app
+from core.worker import Worker
 
 # Set up logging
 logging.basicConfig(
@@ -104,6 +105,20 @@ class ApplicationManager:
         coordinator_thread.start()
         self.services["coordinator"] = coordinator_thread
         logger.info("Coordinator service thread started")
+
+    def start_worker(self):
+        """Start the worker service"""
+        def run_worker():
+            try:
+                worker = Worker()
+                worker.run()
+            except Exception as e:
+                logger.error(f"Worker service error: {e}")
+
+        worker_thread = threading.Thread(target=run_worker, daemon=True)
+        worker_thread.start()
+        self.services["worker"] = worker_thread
+        logger.info("Worker service thread started")
         
     def start_all_services(self):
         """Start all application services"""
@@ -113,6 +128,7 @@ class ApplicationManager:
         self.start_api_server()
         self.start_message_queue_processor()
         self.start_coordinator()
+        self.start_worker()
         
         logger.info("All services started")
         
