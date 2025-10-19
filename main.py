@@ -27,9 +27,8 @@ class ApplicationManager:
     """Manages the lifecycle of all application services"""
     
     def __init__(self):
-        self.services = []
+        self.services = {}
         self.shutdown_event = threading.Event()
-        self.threads = []
         
     def setup_signal_handlers(self):
         """Set up signal handlers for graceful shutdown"""
@@ -51,7 +50,7 @@ class ApplicationManager:
                 
         api_thread = threading.Thread(target=run_server, daemon=True)
         api_thread.start()
-        self.threads.append(api_thread)
+        self.services["api_server"] = api_thread
         logger.info("API server thread started")
         
     def start_message_queue_processor(self):
@@ -75,7 +74,7 @@ class ApplicationManager:
                 
         mq_thread = threading.Thread(target=process_messages, daemon=True)
         mq_thread.start()
-        self.threads.append(mq_thread)
+        self.services["mq_processor"] = mq_thread
         logger.info("Message queue processor thread started")
         
     def start_coordinator(self):
@@ -103,7 +102,7 @@ class ApplicationManager:
                 
         coordinator_thread = threading.Thread(target=run_coordinator, daemon=True)
         coordinator_thread.start()
-        self.threads.append(coordinator_thread)
+        self.services["coordinator"] = coordinator_thread
         logger.info("Coordinator service thread started")
         
     def start_all_services(self):
@@ -125,8 +124,10 @@ class ApplicationManager:
         self.shutdown_event.set()
         
         # Wait for threads to finish (with timeout)
-        for thread in self.threads:
+        for name, thread in self.services.items():
+            logger.info(f"Shutting down {name}...")
             thread.join(timeout=5.0)
+            logger.info(f"{name} shut down.")
             
         # Close Redis pool
         if redis_pool:
@@ -146,3 +147,21 @@ class ApplicationManager:
                 
         logger.info("Application shutdown complete")
         sys.exit(0)
+
+    def run(self):
+        """Run the application and wait for shutdown signal"""
+        self.setup_signal_handlers()
+        self.start_all_services()
+
+        # Keep the main thread alive to handle signals
+        try:
+            while not self.shutdown_event.is_set():
+                time.sleep(1)  # Sleep to avoid busy-waiting
+        except KeyboardInterrupt:
+            logger.info("Keyboard interrupt received, shutting down...")
+            self.shutdown()
+
+
+if __name__ == "__main__":
+    manager = ApplicationManager()
+    manager.run()
