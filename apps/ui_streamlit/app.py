@@ -7,12 +7,6 @@ import sys
 import os
 import json
 
-try:
-    import ollama
-    OLLAMA_AVAILABLE = True
-except ImportError:
-    OLLAMA_AVAILABLE = False
-
 # Add the project root to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
@@ -226,29 +220,14 @@ elif page == "Chat":
         ["Ollama", "OpenAI", "Gemini", "Groq", "Claude"]
     )
 
-    if OLLAMA_AVAILABLE:
-        try:
-            response = ollama.list()
-            if "models" in response:
-                ollama_models = [model["name"] for model in response["models"]]
-            else:
-                ollama_models = []
-        except Exception as e:
-            logger.error(f"Error getting Ollama models: {e}")
-            ollama_models = []
-    else:
+    try:
+        response = requests.get("http://localhost:11434/api/tags")
+        response.raise_for_status()
+        ollama_models = [model["name"] for model in response.json()["models"]]
+    except (requests.exceptions.RequestException, KeyError) as e:
+        logger.error(f"Error getting Ollama models: {e}")
         ollama_models = ["deepseek-v3.1:671b-cloud", "kimi-k2:1t-cloud", "glm-4.6:cloud", "granite3.2-vision:latest", "mxbai-embed-large:latest", "gpt-oss:20b", "gemma3:4b", "mistral-small3.2:latest", "nomic-embed-text:latest", "qwen3-coder:480b-cloud"]
-
-    models = {
-        "Ollama": ollama_models,
-        "OpenAI": ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"],
-        "Gemini": ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"],
-        "Groq": ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "mixtral-8x7b-32768"],
-        "Claude": ["claude-3.5-sonnet", "claude-3-opus", "claude-3-haiku"]
-    }
-
-    if provider == "Ollama" and not OLLAMA_AVAILABLE:
-        st.sidebar.warning("The `ollama` package is not installed. Using a placeholder list of models. Please run `pip install ollama` to get the actual list of models.")
+        st.sidebar.warning("Could not connect to Ollama API. Using a placeholder list of models.")
 
     model = st.sidebar.selectbox(
         "Choose a model:",

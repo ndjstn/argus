@@ -1,5 +1,7 @@
 
 import logging
+import requests
+import json
 
 class LLMRouter:
     """A router for large language models."""
@@ -29,8 +31,26 @@ class LLMRouter:
 
     def _call_ollama(self, model: str, message: str) -> str:
         self.logger.info(f"Calling Ollama model: {model}")
-        # Mock implementation
-        return f"Ollama response to: {message}"
+        try:
+            response = requests.post(
+                "http://localhost:11434/api/generate",
+                json={"model": model, "prompt": message},
+                stream=True
+            )
+            response.raise_for_status()
+            full_response = ""
+            for line in response.iter_lines():
+                if line:
+                    decoded_line = line.decode('utf-8')
+                    json_line = json.loads(decoded_line)
+                    full_response += json_line.get("response", "")
+            return full_response
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"Error calling Ollama API: {e}")
+            return f"Error calling Ollama API: {e}"
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Error decoding Ollama API response: {e}")
+            return f"Error decoding Ollama API response: {e}"
 
     def _call_openai(self, model: str, message: str) -> str:
         self.logger.info(f"Calling OpenAI model: {model}")
