@@ -2,6 +2,8 @@
 import logging
 import requests
 import json
+import os
+import openai
 
 class LLMRouter:
     """A router for large language models."""
@@ -9,6 +11,7 @@ class LLMRouter:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.logger.info("Initializing LLMRouter")
+        self.openai_client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
     def route(self, provider: str, model: str, message: str) -> str:
         """Route a message to the appropriate model."""
@@ -45,8 +48,17 @@ class LLMRouter:
 
     def _call_openai(self, model: str, message: str) -> str:
         self.logger.info(f"Calling OpenAI model: {model}")
-        # Mock implementation
-        return f"OpenAI response to: {message}"
+        try:
+            stream = self.openai_client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": message}],
+                stream=True,
+            )
+            for chunk in stream:
+                yield chunk.choices[0].delta.content or ""
+        except Exception as e:
+            self.logger.error(f"Error calling OpenAI API: {e}")
+            yield f"Error calling OpenAI API: {e}"
 
     def _call_gemini(self, model: str, message: str) -> str:
         self.logger.info(f"Calling Gemini model: {model}")
