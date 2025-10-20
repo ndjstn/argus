@@ -43,6 +43,23 @@ page = st.sidebar.selectbox(
     ["Chat", "Overview", "Agents", "Metrics", "Policy"]
 )
 
+@st.cache_data(ttl=60)
+def get_ollama_models():
+    logger.info("Attempting to fetch Ollama models from the API.")
+    try:
+        response = requests.get("http://localhost:11434/api/tags")
+        response.raise_for_status()  # Raise an exception for bad status codes
+        logger.info("Successfully fetched Ollama models from the API.")
+        return [model["name"] for model in response.json().get("models", [])]
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error getting Ollama models: {e}")
+        st.sidebar.warning("Could not connect to Ollama API. Using a placeholder list of models.")
+        return ["deepseek-v3.1:671b-cloud", "kimi-k2:1t-cloud", "glm-4.6:cloud", "granite3.2-vision:latest", "mxbai-embed-large:latest", "gpt-oss:20b", "gemma3:4b", "mistral-small3.2:latest", "nomic-embed-text:latest", "qwen3-coder:480b-cloud"]
+    except (KeyError, TypeError) as e:
+        logger.error(f"Error parsing Ollama models response: {e}")
+        st.sidebar.warning("Error parsing Ollama models response.")
+        return []
+
 # Helper functions
 @st.cache_data(ttl=5)
 def get_tasks():
@@ -220,14 +237,13 @@ elif page == "Chat":
         ["Ollama", "OpenAI", "Gemini", "Groq", "Claude"]
     )
 
-    try:
-        response = requests.get("http://localhost:11434/api/tags")
-        response.raise_for_status()
-        ollama_models = [model["name"] for model in response.json()["models"]]
-    except (requests.exceptions.RequestException, KeyError) as e:
-        logger.error(f"Error getting Ollama models: {e}")
-        ollama_models = ["deepseek-v3.1:671b-cloud", "kimi-k2:1t-cloud", "glm-4.6:cloud", "granite3.2-vision:latest", "mxbai-embed-large:latest", "gpt-oss:20b", "gemma3:4b", "mistral-small3.2:latest", "nomic-embed-text:latest", "qwen3-coder:480b-cloud"]
-        st.sidebar.warning("Could not connect to Ollama API. Using a placeholder list of models.")
+    models = {
+        "Ollama": get_ollama_models(),
+        "OpenAI": ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"],
+        "Gemini": ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"],
+        "Groq": ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "mixtral-8x7b-32768"],
+        "Claude": ["claude-3.5-sonnet", "claude-3-opus", "claude-3-haiku"]
+    }
 
     model = st.sidebar.selectbox(
         "Choose a model:",
