@@ -8,24 +8,24 @@ class LLMRouter:
         self.logger = logging.getLogger(__name__)
         self.logger.info("Initializing LLMRouter")
 
-    def route(self, model: str, message: str) -> str:
+    def route(self, provider: str, model: str, message: str) -> str:
         """Route a message to the appropriate model."""
-        self.logger.info(f"Routing message to model: {model}")
+        self.logger.info(f"Routing message to {provider} model: {model}")
         self.logger.debug(f"Message content: {message}")
 
-        if "ollama" in model.lower():
+        if provider == "Ollama":
             return self._call_ollama(model, message)
-        elif "openai" in model.lower() or "gpt" in model.lower():
+        elif provider == "OpenAI":
             return self._call_openai(model, message)
-        elif "gemini" in model.lower():
+        elif provider == "Gemini":
             return self._call_gemini(model, message)
-        elif "groq" in model.lower() or "llama" in model.lower() or "mixtral" in model.lower():
+        elif provider == "Groq":
             return self._call_groq(model, message)
-        elif "claude" in model.lower():
+        elif provider == "Claude":
             return self._call_claude(model, message)
         else:
-            self.logger.warning(f"Unknown model provider for model: {model}")
-            return f"Unknown model: {model}"
+            self.logger.warning(f"Unknown provider: {provider}")
+            return f"Unknown provider: {provider}"
 
     def _call_ollama(self, model: str, message: str) -> str:
         self.logger.info(f"Calling Ollama model: {model}")

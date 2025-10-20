@@ -221,7 +221,7 @@ elif page == "Chat":
     )
 
     models = {
-        "Ollama": ["gemma3:4b", "llama2", "mistral"], # Placeholder, requires `ollama list` to get actual models
+        "Ollama": ["deepseek-v3.1:671b-cloud", "kimi-k2:1t-cloud", "glm-4.6:cloud", "granite3.2-vision:latest", "mxbai-embed-large:latest", "gpt-oss:20b", "gemma3:4b", "mistral-small3.2:latest", "nomic-embed-text:latest", "qwen3-coder:480b-cloud"],
         "OpenAI": ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"],
         "Gemini": ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"],
         "Groq": ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "mixtral-8x7b-32768"],
@@ -261,7 +261,7 @@ elif page == "Chat":
                 try:
                     response = requests.post(
                         f"{API_BASE_URL}/chat",
-                        json={"message": prompt, "model": model},
+                        json={"message": prompt, "provider": provider, "model": model},
                         timeout=30
                     )
                     if response.status_code == 200:

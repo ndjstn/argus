@@ -76,6 +76,7 @@ class TaskResponse(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
+    provider: str
     model: str
 
 # API endpoints
@@ -86,9 +87,9 @@ async def root():
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
     """Handle a chat message"""
-    logger.info(f"Received chat message for model {request.model}: '{request.message}'")
+    logger.info(f"Received chat message for model {request.model} from provider {request.provider}: '{request.message}'")
     try:
-        response = llm_router.route(request.model, request.message)
+        response = llm_router.route(request.provider, request.model, request.message)
         logger.info(f"Returning response from model {request.model}: '{response}'")
         return {"response": response}
     except Exception as e:
