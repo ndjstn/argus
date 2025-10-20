@@ -79,10 +79,12 @@ class Coordinator:
         
         task_id = task_spec.get("id", "unknown")
         task_description = task_spec.get("description", "no description")
-        self.logger.info(f"Processing task {task_id}: {task_description}")
+        self.logger.info(f"Received task {task_id} for processing: '{task_description}'")
+        self.logger.debug(f"Task spec: {task_spec}")
         
         enqueue_start = time.time()
         try:
+            self.logger.debug(f"Enqueuing task {task_id} to Redis queue: {self.task_queue}")
             self.redis_client.lpush(self.task_queue, json.dumps(task_spec))
             enqueue_time = (time.time() - enqueue_start) * 1000
             self.total_enqueue_time_ms += enqueue_time
@@ -92,7 +94,7 @@ class Coordinator:
             self.total_processing_time_ms += processing_time
             
             self.logger.info(
-                "Task enqueued successfully",
+                f"Task {task_id} enqueued successfully.",
                 extra={
                     "task_id": task_id,
                     "status": "enqueued",
@@ -108,6 +110,8 @@ class Coordinator:
                 "processing_time_ms": processing_time
             }
         except (redis.ConnectionError, redis.TimeoutError, redis.RedisError) as e:
+            return self._handle_task_error(task_id, e, start_time, enqueue_start)
+        except json.JSONDecodeError as e:
             return self._handle_task_error(task_id, e, start_time, enqueue_start)
         except Exception as e:
             return self._handle_task_error(task_id, e, start_time, enqueue_start)

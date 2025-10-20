@@ -86,13 +86,19 @@ async def root():
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
     """Handle a chat message"""
-    logger.info(f"Received chat message for model {request.model}: {request.message}")
-    response = llm_router.route(request.model, request.message)
-    return {"response": response}
+    logger.info(f"Received chat message for model {request.model}: '{request.message}'")
+    try:
+        response = llm_router.route(request.model, request.message)
+        logger.info(f"Returning response from model {request.model}: '{response}'")
+        return {"response": response}
+    except Exception as e:
+        logger.error(f"An error occurred while processing the chat message: {e}")
+        raise HTTPException(status_code=500, detail="An error occurred while processing the chat message.")
 
 @app.get("/api/tasks", response_model=List[TaskResponse])
 async def get_tasks(filter: Optional[str] = None):
     """Get tasks with optional filter"""
+    logger.info(f"Attempting to fetch tasks with filter: {filter}")
     conn = get_db_connection()
     try:
         if filter:
@@ -103,13 +109,18 @@ async def get_tasks(filter: Optional[str] = None):
             params = ()
         
         tasks = conn.execute(query, params).fetchall()
+        logger.info(f"Successfully fetched {len(tasks)} tasks.")
         return [dict(task) for task in tasks]
+    except Exception as e:
+        logger.error(f"An error occurred while fetching tasks: {e}")
+        raise HTTPException(status_code=500, detail="An error occurred while fetching tasks.")
     finally:
         conn.close()
 
 @app.post("/api/tasks", response_model=TaskResponse)
 async def create_task(task: TaskCreate):
     """Create a new task"""
+    logger.info(f"Attempting to create task: {task.description}")
     conn = get_db_connection()
     try:
         # In a real implementation, this would interface with Taskwarrior
@@ -124,7 +135,7 @@ async def create_task(task: TaskCreate):
         INSERT INTO tasks (tw_uuid, description, project, tags, priority, urgency, status, created_ts, updated_ts)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
-        conn.execute(query, (
+        cursor = conn.execute(query, (
             tw_uuid,
             task.description,
             task.project,
@@ -136,10 +147,15 @@ async def create_task(task: TaskCreate):
             created_ts
         ))
         conn.commit()
+        task_id = cursor.lastrowid
+        logger.info(f"Successfully created task {task_id} with description: {task.description}")
         
         # Fetch the created task
-        task_row = conn.execute("SELECT * FROM tasks WHERE tw_uuid = ?", (tw_uuid,)).fetchone()
+        task_row = conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
         return dict(task_row)
+    except Exception as e:
+        logger.error(f"An error occurred while creating task: {e}")
+        raise HTTPException(status_code=500, detail="An error occurred while creating the task.")
     finally:
         conn.close()
 

@@ -46,113 +46,106 @@ page = st.sidebar.selectbox(
 # Helper functions
 @st.cache_data(ttl=5)
 def get_tasks():
+    logger.info("Attempting to fetch tasks from the API.")
     try:
         response = requests.get(f"{API_BASE_URL}/tasks", timeout=10)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            logger.error(f"API request failed with status code {response.status_code}")
-            st.warning(f"Failed to fetch tasks: {response.status_code}")
-            return []
+        response.raise_for_status()  # Raise an exception for bad status codes
+        logger.info("Successfully fetched tasks from the API.")
+        return response.json()
     except requests.exceptions.Timeout:
-        logger.error("API request timed out")
+        logger.error("API request timed out while fetching tasks.")
         st.error("Request timed out. Please try again.")
         return []
     except requests.exceptions.ConnectionError:
-        logger.error("API connection error")
+        logger.error("API connection error while fetching tasks.")
         st.error("Could not connect to the API. Please check if the service is running.")
         return []
     except requests.exceptions.RequestException as e:
-        logger.error(f"API request error: {e}")
-        st.error(f"Error fetching tasks: {str(e)}")
+        logger.error(f"API request error while fetching tasks: {e}")
+        st.error(f"Error fetching tasks: {e}")
         return []
     except Exception as e:
-        logger.error(f"Unexpected error in get_tasks: {e}")
-        st.error(f"Unexpected error: {str(e)}")
+        logger.error(f"An unexpected error occurred in get_tasks: {e}")
+        st.error(f"An unexpected error occurred: {e}")
         return []
 
 @st.cache_data(ttl=5)
 def get_runs():
+    logger.info("Attempting to fetch runs from the API.")
     try:
         response = requests.get(f"{API_BASE_URL}/runs", timeout=10)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            logger.error(f"API request failed with status code {response.status_code}")
-            st.warning(f"Failed to fetch runs: {response.status_code}")
-            return []
+        response.raise_for_status()  # Raise an exception for bad status codes
+        logger.info("Successfully fetched runs from the API.")
+        return response.json()
     except requests.exceptions.Timeout:
-        logger.error("API request timed out")
+        logger.error("API request timed out while fetching runs.")
         st.error("Request timed out. Please try again.")
         return []
     except requests.exceptions.ConnectionError:
-        logger.error("API connection error")
+        logger.error("API connection error while fetching runs.")
         st.error("Could not connect to the API. Please check if the service is running.")
         return []
     except requests.exceptions.RequestException as e:
-        logger.error(f"API request error: {e}")
-        st.error(f"Error fetching runs: {str(e)}")
+        logger.error(f"API request error while fetching runs: {e}")
+        st.error(f"Error fetching runs: {e}")
         return []
     except Exception as e:
-        logger.error(f"Unexpected error in get_runs: {e}")
-        st.error(f"Unexpected error: {str(e)}")
+        logger.error(f"An unexpected error occurred in get_runs: {e}")
+        st.error(f"An unexpected error occurred: {e}")
         return []
 
 @st.cache_data(ttl=5)
 def get_metrics():
+    logger.info("Attempting to fetch metrics from the API.")
     try:
         response = requests.get(f"{API_BASE_URL}/metrics/daily", timeout=10)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            logger.error(f"API request failed with status code {response.status_code}")
-            st.warning(f"Failed to fetch metrics: {response.status_code}")
-            return []
+        response.raise_for_status()  # Raise an exception for bad status codes
+        logger.info("Successfully fetched metrics from the API.")
+        return response.json()
     except requests.exceptions.Timeout:
-        logger.error("API request timed out")
+        logger.error("API request timed out while fetching metrics.")
         st.error("Request timed out. Please try again.")
         return []
     except requests.exceptions.ConnectionError:
-        logger.error("API connection error")
+        logger.error("API connection error while fetching metrics.")
         st.error("Could not connect to the API. Please check if the service is running.")
         return []
     except requests.exceptions.RequestException as e:
-        logger.error(f"API request error: {e}")
-        st.error(f"Error fetching metrics: {str(e)}")
+        logger.error(f"API request error while fetching metrics: {e}")
+        st.error(f"Error fetching metrics: {e}")
         return []
     except Exception as e:
-        logger.error(f"Unexpected error in get_metrics: {e}")
-        st.error(f"Unexpected error: {str(e)}")
+        logger.error(f"An unexpected error occurred in get_metrics: {e}")
+        st.error(f"An unexpected error occurred: {e}")
         return []
 
 @st.cache_data(ttl=5)
 def get_policy():
+    logger.info("Attempting to fetch policy from the API.")
     try:
         response = requests.get(f"{API_BASE_URL}/policy", timeout=10)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            logger.error(f"API request failed with status code {response.status_code}")
-            st.warning(f"Failed to fetch policy: {response.status_code}")
-            return {}
+        response.raise_for_status()  # Raise an exception for bad status codes
+        logger.info("Successfully fetched policy from the API.")
+        return response.json()
     except requests.exceptions.Timeout:
-        logger.error("API request timed out")
+        logger.error("API request timed out while fetching policy.")
         st.error("Request timed out. Please try again.")
         return {}
     except requests.exceptions.ConnectionError:
-        logger.error("API connection error")
+        logger.error("API connection error while fetching policy.")
         st.error("Could not connect to the API. Please check if the service is running.")
         return {}
     except requests.exceptions.RequestException as e:
-        logger.error(f"API request error: {e}")
-        st.error(f"Error fetching policy: {str(e)}")
+        logger.error(f"API request error while fetching policy: {e}")
+        st.error(f"Error fetching policy: {e}")
         return {}
     except Exception as e:
-        logger.error(f"Unexpected error in get_policy: {e}")
-        st.error(f"Unexpected error: {str(e)}")
+        logger.error(f"An unexpected error occurred in get_policy: {e}")
+        st.error(f"An unexpected error occurred: {e}")
         return {}
 
 def create_task(description, project=None, tags=None, due=None, browser_task=False, url=None, actions=None):
+    logger.info(f"Attempting to create task: {description}")
     try:
         data = {"description": description}
         if project:
@@ -167,27 +160,24 @@ def create_task(description, project=None, tags=None, due=None, browser_task=Fal
             data["actions"] = actions
             
         response = requests.post(f"{API_BASE_URL}/tasks", json=data, timeout=10)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            logger.error(f"API request failed with status code {response.status_code}")
-            st.error(f"Failed to create task: {response.status_code}")
-            return {}
+        response.raise_for_status()  # Raise an exception for bad status codes
+        logger.info(f"Successfully created task: {description}")
+        return response.json()
     except requests.exceptions.Timeout:
-        logger.error("API request timed out")
+        logger.error(f"API request timed out while creating task: {description}")
         st.error("Request timed out. Please try again.")
         return {}
     except requests.exceptions.ConnectionError:
-        logger.error("API connection error")
+        logger.error(f"API connection error while creating task: {description}")
         st.error("Could not connect to the API. Please check if the service is running.")
         return {}
     except requests.exceptions.RequestException as e:
-        logger.error(f"API request error: {e}")
-        st.error(f"Error creating task: {str(e)}")
+        logger.error(f"API request error while creating task: {description}: {e}")
+        st.error(f"Error creating task: {e}")
         return {}
     except Exception as e:
-        logger.error(f"Unexpected error in create_task: {e}")
-        st.error(f"Unexpected error: {str(e)}")
+        logger.error(f"An unexpected error occurred in create_task: {e}")
+        st.error(f"An unexpected error occurred: {e}")
         return {}
 
 if page == "Overview":
