@@ -279,15 +279,26 @@ elif page == "Chat":
                     response = requests.post(
                         f"{API_BASE_URL}/chat",
                         json={"message": prompt, "provider": provider, "model": model},
-                        timeout=30
+                        stream=True
                     )
-                    if response.status_code == 200:
-                        full_response = response.json().get("response")
-                    else:
-                        full_response = f"Error: {response.status_code}"
+                    response.raise_for_status()
+                    full_response = ""
+                    for chunk in response.iter_content(chunk_size=1024):
+                        if chunk:
+                            decoded_chunk = chunk.decode('utf-8')
+                            try:
+                                json_chunk = json.loads(decoded_chunk)
+                                full_response += json_chunk.get("response", "")
+                                message_placeholder.markdown(full_response + "▌")
+                            except json.JSONDecodeError:
+                                # Handle non-json chunks if any
+                                pass
+                    message_placeholder.markdown(full_response)
+
                 except requests.exceptions.RequestException as e:
                     full_response = f"Error: {e}"
-            message_placeholder.markdown(full_response)
+                    message_placeholder.markdown(full_response)
+
             if st.button("Copy", key=f"copy_{len(st.session_state.messages)}"):
                 st.code(full_response)
 

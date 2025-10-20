@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional
 import uvicorn
@@ -89,9 +90,8 @@ async def chat(request: ChatRequest):
     """Handle a chat message"""
     logger.info(f"Received chat message for model {request.model} from provider {request.provider}: '{request.message}'")
     try:
-        response = llm_router.route(request.provider, request.model, request.message)
-        logger.info(f"Returning response from model {request.model}: '{response}'")
-        return {"response": response}
+        response_stream = llm_router.route(request.provider, request.model, request.message)
+        return StreamingResponse(response_stream, media_type="text/event-stream")
     except Exception as e:
         logger.error(f"An error occurred while processing the chat message: {e}")
         raise HTTPException(status_code=500, detail="An error occurred while processing the chat message.")
