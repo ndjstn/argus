@@ -227,7 +227,15 @@ elif page == "Chat":
     )
 
     if OLLAMA_AVAILABLE:
-        ollama_models = [model["name"] for model in ollama.list()["models"]]
+        try:
+            response = ollama.list()
+            if "models" in response:
+                ollama_models = [model["name"] for model in response["models"]]
+            else:
+                ollama_models = []
+        except Exception as e:
+            logger.error(f"Error getting Ollama models: {e}")
+            ollama_models = []
     else:
         ollama_models = ["deepseek-v3.1:671b-cloud", "kimi-k2:1t-cloud", "glm-4.6:cloud", "granite3.2-vision:latest", "mxbai-embed-large:latest", "gpt-oss:20b", "gemma3:4b", "mistral-small3.2:latest", "nomic-embed-text:latest", "qwen3-coder:480b-cloud"]
 
