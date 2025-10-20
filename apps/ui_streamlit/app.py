@@ -17,7 +17,7 @@ from core.exceptions import APIError
 API_BASE_URL = "http://localhost:9000/api"
 
 # Set up logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 st.set_page_config(
