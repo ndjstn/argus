@@ -294,16 +294,15 @@ elif page == "Chat":
                                 # Handle non-json chunks if any
                                 pass
                     message_placeholder.markdown(full_response)
+                    st.session_state.messages.append({"role": "assistant", "content": full_response})
 
                 except requests.exceptions.RequestException as e:
                     full_response = f"Error: {e}"
                     message_placeholder.markdown(full_response)
+                    st.session_state.messages.append({"role": "assistant", "content": full_response})
 
             if st.button("Copy", key=f"copy_{len(st.session_state.messages)}"):
                 st.code(full_response)
-
-        # Add assistant response to chat history
-        st.session_state.messages.append({"role": "assistant", "content": full_response})
     
 elif page == "Agents":
     st.header("Agent Monitoring")
