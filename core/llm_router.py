@@ -3,7 +3,7 @@ import logging
 import requests
 import json
 import os
-import openai
+# import openai
 
 class LLMRouter:
     """A router for large language models."""
@@ -11,7 +11,7 @@ class LLMRouter:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.logger.info("Initializing LLMRouter")
-        self.openai_client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        # self.openai_client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
     def route(self, provider: str, model: str, message: str, history: list) -> str:
         """Route a message to the appropriate model."""
@@ -22,7 +22,8 @@ class LLMRouter:
         if provider == "Ollama":
             return self._call_ollama(model, message, history)
         elif provider == "OpenAI":
-            return self._call_openai(model, message, history)
+            # return self._call_openai(model, message, history)
+            return iter(["OpenAI integration is currently disabled."])
         elif provider == "Gemini":
             return self._call_gemini(model, message, history)
         elif provider == "Groq":
