@@ -278,7 +278,7 @@ elif page == "Chat":
                 try:
                     response = requests.post(
                         f"{API_BASE_URL}/chat",
-                        json={"message": prompt, "provider": provider, "model": model},
+                        json={"message": prompt, "provider": provider, "model": model, "history": st.session_state.messages},
                         stream=True
                     )
                     response.raise_for_status()

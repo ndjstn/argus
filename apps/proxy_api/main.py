@@ -79,6 +79,7 @@ class ChatRequest(BaseModel):
     message: str
     provider: str
     model: str
+    history: List[dict]
 
 # API endpoints
 @app.get("/")
@@ -90,7 +91,7 @@ async def chat(request: ChatRequest):
     """Handle a chat message"""
     logger.info(f"Received chat message for model {request.model} from provider {request.provider}: '{request.message}'")
     try:
-        response_stream = llm_router.route(request.provider, request.model, request.message)
+        response_stream = llm_router.route(request.provider, request.model, request.message, request.history)
         return StreamingResponse(response_stream, media_type="text/event-stream")
     except Exception as e:
         logger.error(f"An error occurred while processing the chat message: {e}")
