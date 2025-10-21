@@ -65,6 +65,14 @@ CREATE TABLE IF NOT EXISTS policy(
   value_json TEXT,
   updated_ts INTEGER
 );
+
+-- conversation history for persistent chat
+CREATE TABLE IF NOT EXISTS conversations(
+  session_id TEXT PRIMARY KEY,
+  history_json TEXT,
+  created_ts INTEGER,
+  updated_ts INTEGER
+);
 """
 
 # Indexes for performance
@@ -73,6 +81,11 @@ INDEXES = [
     "CREATE INDEX IF NOT EXISTS idx_runs_ts ON runs(start_ts);",
     "CREATE INDEX IF NOT EXISTS idx_train_agent ON train_examples(agent);"
 ]
+
+# Index for conversation history
+INDEXES.extend([
+    "CREATE INDEX IF NOT EXISTS idx_conversations_updated ON conversations(updated_ts);"
+])
 
 def migrate_database():
     """Create or migrate the database schema"""

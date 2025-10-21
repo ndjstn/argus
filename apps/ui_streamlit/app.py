@@ -6,6 +6,10 @@ import logging
 import sys
 import os
 import json
+import asyncio
+import aiohttp
+import sqlite3
+from typing import List, Dict, Any
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
@@ -52,6 +56,49 @@ page = st.sidebar.selectbox(
     ["Chat", "Overview", "Agents", "Metrics", "Policy"]
 )
 
+# Database functions for persistent conversation history
+def get_session_history(session_id: str) -> List[Dict[str, str]]:
+    """Retrieve conversation history for a session from database"""
+    try:
+        conn = sqlite3.connect('data/core.db')
+        c = conn.cursor()
+        c.execute("SELECT history_json FROM conversations WHERE session_id=?", (session_id,))
+        row = c.fetchone()
+        conn.close()
+        
+        if row and row[0]:
+            return json.loads(row[0])
+        return []
+    except Exception as e:
+        logger.error(f"Error retrieving session history: {e}")
+        return []
+
+def save_session_history(session_id: str, history: List[Dict[str, str]]) -> None:
+    """Save conversation history for a session to database"""
+    try:
+        conn = sqlite3.connect('data/core.db')
+        c = conn.cursor()
+        c.execute("""INSERT OR REPLACE INTO conversations
+                     (session_id, history_json, created_ts, updated_ts)
+                     VALUES (?, ?, ?, ?)""",
+                  (session_id, json.dumps(history), int(time.time()), int(time.time())))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.error(f"Error saving session history: {e}")
+
+# Async database functions for improved performance
+async def async_get_session_history(session_id: str) -> List[Dict[str, str]]:
+    """Asynchronously retrieve conversation history for a session from database"""
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, get_session_history, session_id)
+
+async def async_save_session_history(session_id: str, history: List[Dict[str, str]]) -> None:
+    """Asynchronously save conversation history for a session to database"""
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, save_session_history, session_id, history)
+
+# Cache optimization for database/FAISS queries
 @st.cache_data(ttl=60)
 def get_ollama_models():
     logger.info("Attempting to fetch Ollama models from the API.")
@@ -69,7 +116,7 @@ def get_ollama_models():
         st.sidebar.warning("Error parsing Ollama models response.")
         return []
 
-# Helper functions
+# Helper functions with caching
 @st.cache_data(ttl=5)
 def get_tasks():
     logger.info("Attempting to fetch tasks from the API.")
@@ -265,6 +312,9 @@ elif page == "Chat":
     # Initialize chat history
     if "messages" not in st.session_state:
         st.session_state.messages = []
+        # Load history from database if session_id exists
+        if "session_id" in st.session_state:
+            st.session_state.messages = asyncio.run(async_get_session_history(st.session_state.session_id))
 
     # Display chat messages from history on app rerun
     for message in st.session_state.messages:
@@ -278,6 +328,10 @@ elif page == "Chat":
             st.markdown(prompt)
         # Add user message to chat history
         st.session_state.messages.append({"role": "user", "content": prompt})
+        # Save to database
+        if "session_id" not in st.session_state:
+            st.session_state.session_id = str(int(time.time()))
+        asyncio.run(async_save_session_history(st.session_state.session_id, st.session_state.messages))
 
         # Display assistant response in chat message container
         with st.chat_message("assistant"):
@@ -285,27 +339,33 @@ elif page == "Chat":
             with st.spinner("Thinking..."):
                 # Call the API
                 try:
-                    response = session.post(
-                        f"{API_BASE_URL}/chat",
-                        json={"message": prompt, "provider": provider, "model": model, "history": st.session_state.messages},
-                        stream=True
-                    )
-                    response.raise_for_status()
-                    full_response = ""
-                    for chunk in response.iter_content(chunk_size=1024):
-                        if chunk:
-                            decoded_chunk = chunk.decode('utf-8')
-                            try:
-                                json_chunk = json.loads(decoded_chunk)
-                                full_response += json_chunk.get("response", "")
-                                message_placeholder.markdown(full_response + "▌")
-                            except json.JSONDecodeError:
-                                # Handle non-json chunks if any
-                                pass
-                    message_placeholder.markdown(full_response)
-                    st.session_state.messages.append({"role": "assistant", "content": full_response})
+                    async def fetch_response():
+                        async with aiohttp.ClientSession() as async_session:
+                            async with async_session.post(
+                                f"{API_BASE_URL}/chat",
+                                json={
+                                    "message": prompt,
+                                    "provider": provider,
+                                    "model": model,
+                                    "history": st.session_state.messages[:-1],  # Exclude the current user message
+                                    "session_id": st.session_state.session_id
+                                },
+                            ) as response:
+                                response.raise_for_status()
+                                full_response = ""
+                                async for chunk in response.content.iter_any():
+                                    if chunk:
+                                        decoded_chunk = chunk.decode('utf-8')
+                                        full_response += decoded_chunk
+                                        message_placeholder.markdown(full_response + "▌")
+                                message_placeholder.markdown(full_response)
+                                st.session_state.messages.append({"role": "assistant", "content": full_response})
+                                # Save to database
+                                await async_save_session_history(st.session_state.session_id, st.session_state.messages)
+                                return full_response
 
-                except requests.exceptions.RequestException as e:
+                    full_response = asyncio.run(fetch_response())
+                except aiohttp.ClientError as e:
                     full_response = f"Error: {e}"
                     message_placeholder.markdown(full_response)
 

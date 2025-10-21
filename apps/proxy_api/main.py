@@ -51,6 +51,55 @@ def get_db_connection():
 
 llm_router = LLMRouter()
 
+# Conversation history helper functions
+def get_conversation_history(session_id: str) -> List[dict]:
+    """Retrieve conversation history for a session from the database."""
+    conn = get_db_connection()
+    try:
+        cursor = conn.execute(
+            "SELECT history_json FROM conversations WHERE session_id = ?",
+            (session_id,)
+        )
+        row = cursor.fetchone()
+        if row and row[0]:
+            return json.loads(row[0])
+        return []
+    except Exception as e:
+        logger.error(f"Error retrieving conversation history: {e}")
+        return []
+    finally:
+        conn.close()
+
+def save_conversation_history(session_id: str, history: List[dict]) -> None:
+    """Save conversation history for a session to the database."""
+    conn = get_db_connection()
+    try:
+        history_json = json.dumps(history)
+        timestamp = int(datetime.now().timestamp())
+        
+        # Check if session exists
+        cursor = conn.execute(
+            "SELECT session_id FROM conversations WHERE session_id = ?",
+            (session_id,)
+        )
+        if cursor.fetchone():
+            # Update existing session
+            conn.execute(
+                "UPDATE conversations SET history_json = ?, updated_ts = ? WHERE session_id = ?",
+                (history_json, timestamp, session_id)
+            )
+        else:
+            # Insert new session
+            conn.execute(
+                "INSERT INTO conversations (session_id, history_json, created_ts, updated_ts) VALUES (?, ?, ?, ?)",
+                (session_id, history_json, timestamp, timestamp)
+            )
+        conn.commit()
+    except Exception as e:
+        logger.error(f"Error saving conversation history: {e}")
+    finally:
+        conn.close()
+
 # Data models
 class TaskCreate(BaseModel):
     description: str
@@ -80,6 +129,7 @@ class ChatRequest(BaseModel):
     provider: str
     model: str
     history: List[dict]
+    session_id: str
 
 # API endpoints
 @app.get("/")
@@ -88,11 +138,32 @@ async def root():
 
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
-    """Handle a chat message"""
+    """Handle a chat message with conversation history persistence"""
     logger.info(f"Received chat message for model {request.model} from provider {request.provider}: '{request.message}'")
     try:
-        response_stream = llm_router.route(request.provider, request.model, request.message, request.history)
-        return StreamingResponse(response_stream, media_type="text/event-stream")
+        # Get conversation history
+        history = get_conversation_history(request.session_id)
+        
+        # Add user message to history
+        history.append({"role": "user", "content": request.message})
+        
+        # Process with LLM router
+        response_stream = llm_router.route(request.provider, request.model, request.message, history)
+        
+        # Create a wrapper to save history after streaming is complete
+        async def response_generator():
+            full_response = ""
+            try:
+                async for chunk in response_stream:
+                    full_response += chunk
+                    yield chunk
+            finally:
+                # Add assistant response to history
+                history.append({"role": "assistant", "content": full_response})
+                # Save updated history after streaming is complete
+                save_conversation_history(request.session_id, history)
+        
+        return StreamingResponse(response_generator(), media_type="text/event-stream")
     except Exception as e:
         logger.error(f"An error occurred while processing the chat message: {e}")
         raise HTTPException(status_code=500, detail="An error occurred while processing the chat message.")

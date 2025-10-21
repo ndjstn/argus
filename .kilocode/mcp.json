@@ -1,0 +1,37 @@
+{
+  "mcpServers": {
+    "sqlite": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-sqlite",
+        "--db-path",
+        "~/Desktop/argus"
+      ],
+      "disabled": true,
+      "alwaysAllow": []
+    },
+    "genkit": {
+      "command": "npm",
+      "args": [
+        "install",
+        "@genkit-ai/mcp"
+      ],
+      "disabled": true,
+      "alwaysAllow": []
+    },
+    "qdrant": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-qdrant"
+      ],
+      "env": {
+        "QDRANT_URL": "http://localhost:6333",
+        "QDRANT_API_KEY": "hange-me-strong-key",
+        "COLLECTION_NAME": "kilo",
+        "EMBEDDING_MODEL": ""
+      },
+      "disabled": true,
+      "alwaysAllow": []
+    }
+  }
+}
