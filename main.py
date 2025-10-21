@@ -171,8 +171,7 @@ class ApplicationManager:
 
         # Keep the main thread alive to handle signals
         try:
-            while not self.shutdown_event.is_set():
-                time.sleep(1)  # Sleep to avoid busy-waiting
+            self.shutdown_event.wait()
         except KeyboardInterrupt:
             logger.info("Keyboard interrupt received, shutting down...")
             self.shutdown()

@@ -206,7 +206,7 @@ class TaskwarriorAdapter:
         except TaskwarriorError as e:
             operation_time = time.time() - start_time
             # Use the string representation provided by the taskw library
-            error_msg = f"TaskwarriorError: {e.stderr.decode('utf-8') if isinstance(e.stderr, bytes) else e.stderr}"
+            error_msg = f"TaskwarriorError: {str(e)}"
             self.logger.error("Error creating task in Taskwarrior", extra={
                 "event": "taskwarrior_create_task_error",
                 "description": description,

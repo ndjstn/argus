@@ -47,7 +47,8 @@ class LLMRouter:
                 if line:
                     decoded_line = line.decode('utf-8')
                     json_line = json.loads(decoded_line)
-                    yield json_line["message"]["content"]
+                    content = json_line["message"]["content"]
+                    yield json.dumps({"response": content})
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Error calling Ollama API: {e}")
             yield f"Error calling Ollama API: {e}"

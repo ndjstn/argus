@@ -1,5 +1,6 @@
 from typing import Dict, Any
 import logging
+from sentence_transformers import SentenceTransformer
 from tools.obsidian_conn.main import ObsidianConnector
 from tools.faiss_store.main import FAISSStore
 
@@ -11,6 +12,7 @@ class MemoryAgent:
         self.logger.info("Initializing Memory Agent")
         self.obsidian_conn = ObsidianConnector(vault_path)
         self.faiss_store = FAISSStore(index_path)
+        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
         
     def execute_task(self, task_spec: Dict[str, Any]) -> Dict[str, Any]:
         """Execute a memory-related task"""
@@ -48,11 +50,11 @@ class MemoryAgent:
                         "error": "No query provided for search_vectors operation"
                     }
                 
-                # Convert query to vector (simplified)
-                query_vector = [ord(c) for c in query]  # In reality, this would use an embedding model
+                # Convert query to vector
+                query_vector = self.embedding_model.encode([query])
                 
                 # Search FAISS store
-                results = self.faiss_store.search(query_vector)
+                results = self.faiss_store.search(query_vector, k=5)
                 result_str = f"Found {len(results)} similar vectors for query: {query}"
                 
             else:

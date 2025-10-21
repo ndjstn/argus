@@ -6,6 +6,8 @@ import logging
 import sys
 import os
 import json
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 
 # Add the project root to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -15,6 +17,13 @@ from core.exceptions import APIError
 
 # Configuration
 API_BASE_URL = "http://localhost:9000/api"
+
+# Set up requests session with retries
+session = requests.Session()
+retry = Retry(connect=5, backoff_factor=0.5)
+adapter = HTTPAdapter(max_retries=retry)
+session.mount('http://', adapter)
+session.mount('https://', adapter)
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -47,7 +56,7 @@ page = st.sidebar.selectbox(
 def get_ollama_models():
     logger.info("Attempting to fetch Ollama models from the API.")
     try:
-        response = requests.get("http://localhost:11434/api/tags")
+        response = session.get("http://localhost:11434/api/tags")
         response.raise_for_status()  # Raise an exception for bad status codes
         logger.info("Successfully fetched Ollama models from the API.")
         return [model["name"] for model in response.json().get("models", [])]
@@ -65,7 +74,7 @@ def get_ollama_models():
 def get_tasks():
     logger.info("Attempting to fetch tasks from the API.")
     try:
-        response = requests.get(f"{API_BASE_URL}/tasks", timeout=10)
+        response = session.get(f"{API_BASE_URL}/tasks", timeout=10)
         response.raise_for_status()  # Raise an exception for bad status codes
         logger.info("Successfully fetched tasks from the API.")
         return response.json()
@@ -90,7 +99,7 @@ def get_tasks():
 def get_runs():
     logger.info("Attempting to fetch runs from the API.")
     try:
-        response = requests.get(f"{API_BASE_URL}/runs", timeout=10)
+        response = session.get(f"{API_BASE_URL}/runs", timeout=10)
         response.raise_for_status()  # Raise an exception for bad status codes
         logger.info("Successfully fetched runs from the API.")
         return response.json()
@@ -115,7 +124,7 @@ def get_runs():
 def get_metrics():
     logger.info("Attempting to fetch metrics from the API.")
     try:
-        response = requests.get(f"{API_BASE_URL}/metrics/daily", timeout=10)
+        response = session.get(f"{API_BASE_URL}/metrics/daily", timeout=10)
         response.raise_for_status()  # Raise an exception for bad status codes
         logger.info("Successfully fetched metrics from the API.")
         return response.json()
@@ -140,7 +149,7 @@ def get_metrics():
 def get_policy():
     logger.info("Attempting to fetch policy from the API.")
     try:
-        response = requests.get(f"{API_BASE_URL}/policy", timeout=10)
+        response = session.get(f"{API_BASE_URL}/policy", timeout=10)
         response.raise_for_status()  # Raise an exception for bad status codes
         logger.info("Successfully fetched policy from the API.")
         return response.json()
@@ -176,7 +185,7 @@ def create_task(description, project=None, tags=None, due=None, browser_task=Fal
             data["url"] = url
             data["actions"] = actions
             
-        response = requests.post(f"{API_BASE_URL}/tasks", json=data, timeout=10)
+        response = session.post(f"{API_BASE_URL}/tasks", json=data, timeout=10)
         response.raise_for_status()  # Raise an exception for bad status codes
         logger.info(f"Successfully created task: {description}")
         return response.json()
@@ -276,7 +285,7 @@ elif page == "Chat":
             with st.spinner("Thinking..."):
                 # Call the API
                 try:
-                    response = requests.post(
+                    response = session.post(
                         f"{API_BASE_URL}/chat",
                         json={"message": prompt, "provider": provider, "model": model, "history": st.session_state.messages},
                         stream=True
@@ -299,7 +308,6 @@ elif page == "Chat":
                 except requests.exceptions.RequestException as e:
                     full_response = f"Error: {e}"
                     message_placeholder.markdown(full_response)
-                    st.session_state.messages.append({"role": "assistant", "content": full_response})
 
             if st.button("Copy", key=f"copy_{len(st.session_state.messages)}"):
                 st.code(full_response)

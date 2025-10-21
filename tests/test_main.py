@@ -7,9 +7,6 @@ import sys
 import os
 from unittest.mock import patch, MagicMock
 
-# Add the project root to the path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
 
 class TestMainApplication:
     """Test suite for main application module."""
